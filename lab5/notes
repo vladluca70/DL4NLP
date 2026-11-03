@@ -1,0 +1,295 @@
+EXPLICATII - WEEK 5: TOPIC MODELING (TASK 2, 3, 4)
+====================================================================
+
+
+####################################################################
+PARTEA 1: CE SE CERE IN FIECARE TASK
+####################################################################
+
+
+--------------------------------------------------------------------
+TASK 2 - Topic modeling
+--------------------------------------------------------------------
+Trebuie aplicate trei metode pe cele doua matrici document-termen
+(BoW si TF-IDF), deci 6 combinatii, cu k = 3 topicuri:
+
+  1. LSA  (TruncatedSVD)
+  2. NMF  (Non-negative Matrix Factorization)
+  3. LDA  (LatentDirichletAllocation)
+
+Pentru fiecare combinatie se cere:
+  - afisarea celor 10 cuvinte cele mai importante pe fiecare topic;
+  - asignarea fiecarui document la topicul sau cel mai reprezentativ
+    (la LSA: componenta cu cel mai mare scor ABSOLUT);
+  - verificarea daca documentele din acelasi domeniu (music, football,
+    school) sunt grupate in acelasi topic;
+  - scatter plots pentru cuvinte si pentru documente, folosind
+    embeddingurile obtinute de model.
+
+
+--------------------------------------------------------------------
+TASK 3 - Coerenta topicurilor
+--------------------------------------------------------------------
+  - Se cerceteaza metricile de coerenta din Gensim si se calculeaza
+    pentru fiecare model.
+  - Se compara scorurile si se discuta daca se potrivesc cu
+    interpretarea calitativa (citirea cuvintelor din topicuri).
+  - Se repeta experimentele pentru k = 5 si se analizeaza efectul
+    schimbarii numarului de topicuri.
+
+
+--------------------------------------------------------------------
+TASK 4 - Analiza comparativa
+--------------------------------------------------------------------
+Se rezuma rezultatele si se raspunde la 5 intrebari:
+
+  1. Cum influenteaza alegerea BoW vs TF-IDF topicurile extrase de
+     LSA, NMF si LDA?
+  2. Care metoda produce cele mai interpretabile topicuri?
+  3. Un scor Cv mai mare inseamna mereu topicuri mai utile?
+  4. Cum afecteaza cresterea numarului de topicuri coerenta si
+     redundanta topicurilor?
+  5. Corespund topicurile extrase celor 3 domenii initiale? Explica
+     diferentele.
+
+Livrabilul final: un Jupyter Notebook cu cod si o scurta discutie a
+rezultatelor.
+
+
+####################################################################
+PARTEA 2: EXPLICAREA CODULUI
+####################################################################
+
+
+--------------------------------------------------------------------
+CUM SE LEAGA FISIERELE
+--------------------------------------------------------------------
+
+  task1.py  ->  produce vectors.pkl
+  task2.py  ->  citeste vectors.pkl, defineste functiile de baza
+  task3.py  ->  importa din task2, adauga metricile Gensim
+  task4.py  ->  importa din task2 si task3, face analiza finala
+
+Ordinea de rulare:
+
+  python task2.py
+  python task3.py
+  python task4.py
+
+Toate fisierele trebuie sa fie in acelasi folder, impreuna cu
+vectors.pkl.
+
+Blocul  if __name__ == "__main__": main()  face ca main() sa ruleze
+doar cand fisierul este rulat direct, nu si cand este importat de un
+alt fisier. De aceea task3.py poate face "from task2 import ..." fara
+sa relanseze tot task2.
+
+
+====================================================================
+task2.py
+====================================================================
+
+Constantele de la inceput
+  K = 3          numarul de topicuri
+  TOP_N = 10     cate cuvinte afisam pe topic
+  SEED = 0       seed fix, ca rezultatele sa fie reproductibile
+  METHODS        lista metodelor, ca sa le parcurgem intr-un for
+  os.makedirs("plots", ...)  creeaza folderul pentru grafice
+
+load_data()
+  Citeste vectors.pkl, salvat de task1.py. Contine textele
+  preprocesate, etichetele (domeniile), vectorizatoarele si matricile
+  BoW si TF-IDF.
+
+make_model(method, k)
+  Creeaza modelul potrivit metodei:
+  - TruncatedSVD pentru LSA;
+  - NMF cu init="nndsvd" (initializare deterministica, mai stabila)
+    si max_iter=500, ca sa aiba timp sa convearga;
+  - LatentDirichletAllocation cu max_iter=50.
+
+fit_model(method, X, k)
+  Antreneaza modelul si returneaza doua matrici:
+  - doc_topic = model.fit_transform(X)
+      matrice documente x topicuri. Fiecare document are un scor
+      pentru fiecare topic. Este embeddingul documentului.
+  - comp = model.components_
+      matrice topicuri x cuvinte. Fiecare rand este un topic, adica
+      ponderea fiecarui cuvant in acel topic.
+
+  Cum se interpreteaza la fiecare metoda:
+  - LSA: valorile vin din descompunerea SVD si au semne mixte
+    (+ si -), de aceea sunt greu de interpretat.
+  - NMF: toate valorile sunt non-negative, deci topicurile sunt
+    aditive si clare.
+  - LDA: doc_topic sunt probabilitati (distributia topicurilor in
+    document), iar comp sunt pseudo-numaratori de cuvinte pe topic.
+
+top_idx(comp, n)
+  Returneaza indicii celor mai importanti n termeni pe fiecare topic.
+  np.argsort(-np.abs(comp), axis=1) sorteaza descrescator dupa valoarea
+  absoluta. Absolutul conteaza la LSA, unde un cuvant cu scor -0.8 este
+  la fel de important ca unul cu +0.8. La NMF si LDA nu schimba nimic.
+
+top_words(...)
+  Transforma acesti indici in cuvintele propriu-zise.
+
+assign_topics(doc_topic)
+  Alege pentru fiecare document topicul cu scorul absolut maxim
+  (argmax pe abs). Este exact regula din cerinta pentru LSA si este
+  corecta si pentru celelalte doua metode.
+
+purity(...) si ari(...)
+  Masoara cat de bine se potrivesc topicurile cu domeniile reale:
+  - Purity: pentru fiecare topic se ia domeniul majoritar, se aduna
+    aceste majoritati si se imparte la numarul de documente.
+    1.0 inseamna grupare perfecta.
+  - ARI (Adjusted Rand Index): compara doua grupari si este corectat
+    pentru potriviri intamplatoare. 1.0 inseamna identic, 0 inseamna
+    aleator.
+  Cele doua cifre transforma "examineaza daca documentele sunt
+  grupate" intr-un numar.
+
+DIMS
+  Spune ce dimensiuni din embedding se deseneaza. Avem k = 3
+  dimensiuni, dar graficul are 2. Pentru LSA se sare peste prima
+  dimensiune, fiindca pe date necentrate ea reflecta mai ales
+  frecventa generala a cuvintelor. Pentru NMF si LDA se iau primele
+  doua.
+
+plot_words(...)
+  Deseneaza fiecare cuvant ca un punct (comp.T are cuvinte pe randuri).
+  Majoritatea punctelor sunt gri si mici. Doar top cuvintele fiecarui
+  topic sunt colorate si etichetate, altfel graficul ar avea mii de
+  cuvinte suprapuse.
+
+plot_docs(...)
+  Deseneaza fiecare document ca un punct. Culoarea reprezinta domeniul
+  real, iar forma reprezinta topicul gasit de model. Daca modelul
+  functioneaza bine, punctele de aceeasi culoare au si aceeasi forma
+  si sunt grupate.
+
+main()
+  1. Incarca datele.
+  2. Ia lista de cuvinte din vocabularul BoW (terms). Vocabularul este
+     acelasi pentru BoW si TF-IDF, fiindca ai folosit aceiasi
+     parametri (min_df, max_df).
+  3. Parcurge cele 6 combinatii (2 reprezentari x 3 metode). Pentru
+     fiecare: antreneaza modelul, afiseaza topicurile, asigneaza
+     documentele, afiseaza tabelul crosstab (domeniu real x topic
+     gasit) cu purity si ARI, apoi salveaza cele doua grafice in
+     folderul plots/.
+
+
+====================================================================
+task3.py
+====================================================================
+
+Importuri si constante
+  - Din Gensim: Dictionary (mapeaza cuvinte la id-uri) si
+    CoherenceModel (calculeaza coerenta).
+  - Din task2 se reutilizeaza functiile deja scrise.
+  - KS = [3, 5]  cele doua valori de k cerute.
+  - METRICS = cele 4 metrici Gensim folosite:
+      c_v     metrica din curs (Roder et al.). Foloseste o fereastra
+              glisanta de 110 cuvinte, calculeaza NPMI intre perechi
+              de cuvinte, construieste vectori si face media
+              similaritatii cosinus. Corelata bine cu judecata umana.
+      u_mass  se bazeaza pe co-aparitia in documente. Valorile sunt
+              negative; mai aproape de 0 inseamna mai bine.
+      c_uci   bazata pe PMI si fereastra glisanta.
+      c_npmi  PMI normalizat.
+
+diversity(topics)
+  Formula din slide: cuvinte unice / cuvinte totale in top-N al tuturor
+  topicurilor. 1.0 inseamna ca niciun cuvant nu se repeta intre
+  topicuri. Valori mici inseamna topicuri redundante.
+
+coherence_scores(topics, texts, dictionary)
+  Calculeaza cele 4 scoruri pentru o lista de topicuri. Detalii:
+  - topics este o lista de liste de cuvinte (nu de indici);
+  - texts sunt documentele tokenizate; Gensim are nevoie de ele ca sa
+    numere co-aparitiile;
+  - processes=1 evita probleme de multiprocessing (mai ales pe
+    Windows).
+
+evaluate_all(data, ks, verbose)
+  Functia centrala:
+  1. Pregateste texts (documentele preprocesate, impartite in cuvinte)
+     si dictionary.
+  2. Pentru fiecare k, reprezentare si metoda:
+       - antreneaza modelul (fit_model din task2);
+       - extrage topicurile ca liste de cuvinte;
+       - asigneaza documentele;
+       - calculeaza cele 4 coerente, diversity, purity si ARI;
+       - adauga totul ca rand intr-un tabel.
+  3. Returneaza un DataFrame pandas cu 12 randuri
+     (2 valori de k x 2 reprezentari x 3 metode).
+  Daca verbose=True, afiseaza si topicurile langa scoruri. Asta ajuta
+  la cerinta "compara scorurile cu interpretarea calitativa".
+
+main()
+  Apeleaza evaluate_all cu verbose=True, afiseaza cate un tabel pentru
+  k = 3 si k = 5 si salveaza totul in coherence_results.csv. La final
+  printeaza o nota despre cum se citesc scorurile (la u_mass, mai
+  aproape de 0 este mai bine).
+
+
+====================================================================
+task4.py
+====================================================================
+
+Acest fisier nu mai antreneaza nimic nou. Apeleaza evaluate_all din
+task3 pentru k = 3 si k = 5, apoi analizeaza tabelul rezultat. Datele
+sunt impartite in k3 si k5. Fiecare intrebare este tratata separat:
+
+1. BoW vs TF-IDF
+   pivot_table arata Cv mediu si purity medie, cu metodele pe randuri
+   si reprezentarile pe coloane. Urmeaza textul de interpretare:
+   - BoW foloseste frecvente brute, deci documentele lungi domina;
+   - TF-IDF reduce greutatea cuvintelor prezente in multe documente;
+   - LDA pe TF-IDF merge tehnic, dar incalca ipoteza modelului (care
+     asteapta numaratori).
+
+2. Cea mai interpretabila metoda
+   Media metricilor pe metoda la k = 3. idxmax() indica metoda cu cel
+   mai mare Cv si metoda cu cea mai mare purity. Textul explica de ce
+   NMF este de obicei cel mai clar (valori non-negative) si LSA cel mai
+   greu de citit (semne mixte).
+
+3. Cv mare inseamna topicuri mai bune?
+   Calculeaza corelatia dintre Cv si purity, respectiv diversity, si
+   afiseaza configuratia cu cel mai mare Cv alaturi de cea cu cea mai
+   mare purity. Daca difera, ai chiar in cifre argumentul ca Cv singur
+   nu este suficient.
+
+4. Efectul lui k
+   Tabel comparativ Cv si diversity la k = 3 vs k = 5, pe metoda, plus
+   diferenta medie. Textul explica fenomenul: cu 5 topicuri, domeniile
+   se sparg in subteme (de exemplu football in jucatori, competitii si
+   reguli), dar apare redundanta.
+
+5. Corespondenta cu domeniile
+   Tabelul cu purity si ARI pe combinatie (k = 3). Textul explica
+   diferentele prin articolele de granita (Education, Teacher, Music,
+   Opera) si prin numele proprii din articolele despre fotbalisti.
+
+La final salveaza tabelul in final_results.csv.
+
+
+--------------------------------------------------------------------
+ATENTIE LA TEXTELE DE "INTERPRETARE" DIN task4.py
+--------------------------------------------------------------------
+Sunt scrise pe baza teoriei din cursul PDF, nu pe rezultatele tale
+reale. Sunt un punct de plecare, nu concluzii. Inainte sa le pui in
+notebook, citeste-le alaturi de cifrele afisate si modifica ce nu se
+confirma. De exemplu, daca pe datele tale TF-IDF nu imbunatateste LSA,
+trebuie sa scrii asta.
+
+
+--------------------------------------------------------------------
+FISIERE GENERATE LA RULARE
+--------------------------------------------------------------------
+  plots/*.png              graficele din task2 (cuvinte + documente)
+  coherence_results.csv    tabelul de coerente din task3
+  final_results.csv        tabelul final din task4
