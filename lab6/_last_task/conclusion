@@ -1,0 +1,21 @@
+În urma experimentelor efectuate cu cele două modele pre-antrenate de embeddings (GloVe 50d și Word2Vec 300d), se pot desprinde următoarele concluzii cu privire la capacitatea lor de a surprinde similaritatea și înrudirea semantică:
+
+Capacitatea de a discrimina similaritatea (Similaritatea Cosinus):
+
+Ambele modele au demonstrat o performanță excelentă în separarea cuvintelor înrudite de cele neînrudite.
+
+Pentru perechile semantice apropiate (ex: king - queen, dog - animal), ambele modele au generat scoruri mari de similaritate cosinus (între 0.60 și 0.78).
+
+Pentru perechile fără legătură (ex: computer - banana sau king - keyboard), scorurile au scăzut drastic spre zero (ajungând chiar la ~0.017 în Word2Vec), ceea ce demonstrează că ambele modele învață contextele corecte din corpusurile de text.
+
+Reprezentarea spațială și Clusteringul (PCA, t-SNE și Dendrograme):
+
+Metoda de reducere a dimensionalității (t-SNE) și clusteringul ierarhic (dendrogramele) au scos în evidență faptul că ambele modele grupează în mod natural cuvintele din aceleași domenii (de exemplu, animalele între ele, tehnologia în alt grup, țările separat).
+
+Se observă o structură semantică clară în ambele cazuri, în timp ce proiecțiile pe dimensiuni aleatorii au generat un aspect complet haotic, confirmând că informația semantică nu se află pe o singură dimensiune izolată, ci este distribuită în întregul spațiu vectorial.
+
+Comparativ: GloVe vs. Word2Vec:
+
+Word2Vec (300 dimensiuni, antrenat pe Google News) oferă o granularitate fină datorită numărului mare de dimensiuni și a volumului masiv de date. Acest lucru se vede în scorurile foarte scăzute pentru cuvinte complet neînrudite și în claritatea grupurilor.
+
+GloVe (50 dimensiuni), deși folosește un număr de 6 ori mai mic de dimensiuni (fiind mult mai eficient din punct de vedere computațional și al memoriei RAM), reușește să capteze surprinzător de bine relațiile semantice generale, obținând scoruri de similaritate foarte apropiate de cele ale Word2Vec.

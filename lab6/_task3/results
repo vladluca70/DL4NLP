@@ -1,0 +1,7 @@
+((.venv312) ) vlad@vlad-Lenovo-Y520-15IKBN:~/Desktop/python/dl4nlp/lab6$ python task3.py 
+Se încarcă modelele GloVe și Word2Vec...
+Cuvinte folosite pentru clustering (25): ['dog', 'cat', 'lion', 'tiger', 'horse', 'computer', 'software', 'keyboard', 'mouse', 'internet', 'apple', 'banana', 'orange', 'fruit', 'food', 'france', 'germany', 'london', 'paris', 'rome', 'happy', 'sad', 'king', 'queen', 'car']
+✔ S-a salvat dendrograma: dendrogram_glove.png
+✔ S-a salvat dendrograma: dendrogram_w2v.png
+
+Toate sarcinile au fost finalizate! Verifică imaginile generate (dendrogram_glove.png și dendrogram_w2v.png).
